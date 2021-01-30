@@ -326,6 +326,8 @@
          }
       },
       checkDeath: function(obj) { 
+      console.log("Checking death");
+      console.dir(obj);
          for (var i=1; i<cdr.objects.length; i++) {
             var b = cdr.objects[i];
             if (b.level === obj.level) {
