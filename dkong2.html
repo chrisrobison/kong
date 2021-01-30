@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <title></title>
+   <style>
+      @import url('https://fonts.googleapis.com/css?family=Press+Start+2P');
+      body { padding:0; margin:0; background-color:#000; font-size:24px; text-align:center; font-family: "Press Start 2P", cursive}
+      div#main { display:inline-block; position:relative; background-image:url("dkong-bg.png"); background-size:100% 100%; height:1024px; width:896px; top:10px;}
+      .kong { display:inline-block; position:absolute; left:10%; top:20.5%; transition: all 500ms ease-in; }
+      .hop { animation: hop 600ms 1; }
+      @keyframes hop {
+         0% { transform: translateY(0px); }
+         50% { transform: translateY(-10px); }
+         100% { transform: translateY(0px); }
+      }
+      #p1score { position:absolute; color:#eef; top:4%; left:6.5%; display:inline-block; } 
+      #p2score { position:absolute; color:#eef; top:4%; left:74%; display:inline-block; } 
+      #hiscore { position:absolute; color:#eef; top:4%; left:40%; display:inline-block; } 
+      #kong { z-index:1000; }
+      #oilbarrel { position:absolute; top:85%; left:0; height:100px; width:55px; }
+      #mario { position:absolute; bottom:28px; left:64px; height:48px; width:45px; }
+      #damsel { position:absolute; top:14.5%; left:40%; height:64px;  z-index:100; }
+      .roller { position:absolute; display:inline-block; z-index:1001; }
+      .fall { transition: top 500ms linear; }
+   </style>
+</head>
+<body>
+   <div id='main'>
+      <div id='p1score'>000000</div>
+      <div id='p2score'>000000</div>
+      <div id='hiscore'>000000</div>
+      <img id='kong' src='kong0.png' class='kong' height='128' width='160'>
+      <img id='oilbarrel' src='oilbarrel1.gif' height='100' width='55'>
+      <img id='damsel' src='damsel.gif' height='64'>
+      <img id='mario' src='mario0.png' height='48' width='45'>
+   </div>
+<script>
+(function(w, d) {
+   w.cdr = {
+      config: {
+         scale: (window.innerHeight - 40) / 1024,
+         width: (window.innerHeight - 40) * 0.875,
+         step: 32
+      },
+      state: {
+         kong: {
+            x: 80,
+            current:0
+         },
+         canMove: true
+      },
+      assets: {
+         
+      },
+      objects: [
+         { 
+            type: "mario",
+            action: "",
+            direction: 0,
+            img: document.getElementById('mario'),
+            xv: 4,
+            yv: 0,
+            x: 100,
+            y: (window.innerHeight * 0.87),
+            level: 5,
+            delay:1000,
+            now: Date.now()
+         }      
+      ],
+      kong: d.getElementById('kong'),
+      init: function() {
+         cdr.main = main = d.getElementById('main');
+         
+         var ratio = cdr.kong.width / cdr.kong.height;
+         var newheight = cdr.kong.height * cdr.config.scale;
+
+         cdr.kong.height = newheight;
+         cdr.kong.width = newheight * ratio;
+         cdr.kong.addEventListener("animationend", function() { cdr.state.canMove = true; });
+
+         $$("oilbarrel").height = $$("oilbarrel").height * cdr.config.scale;
+         cdr.assets.barrelAnimated = new Image();
+         cdr.assets.barrelAnimated.src = "ani-barrel-down.gif";
+         cdr.assets.barrelAnimated.classList.add('roller');
+         
+         cdr.assets.caskAnimated = new Image();
+         cdr.assets.caskAnimated.src = "ani-cask-down.gif";
+         cdr.assets.caskAnimated.classList.add('roller');
+
+         cdr.assets.rollingCask = new Image();
+         cdr.assets.rollingCask.src = "rollingcask.gif";
+         cdr.assets.rollingCask.classList.add('roller');
+
+         cdr.assets.rollingBarrel = new Image();
+         cdr.assets.rollingBarrel.src = "rollingbarrel.gif";
+         cdr.assets.rollingBarrel.classList.add('roller');
+
+         main.style.height = (window.innerHeight - 40) + "px";
+         main.style.width = (window.innerHeight - 40) * 0.875 + "px";
+         main.style.top = "20px";
+
+         d.addEventListener("keydown", function(e) {
+            console.log(e.keyCode);
+            switch(e.keyCode) {
+               case 39:    // right arrow
+                  if (!cdr.state.canMove) { return; }
+                  cdr.state.canMove = false;
+                  cdr.kong.classList.remove('hop');
+                  cdr.state.kong.x += cdr.config.step;
+                  cdr.state.kong.current ^= 1;
+                  cdr.kong.src = "kong" + (cdr.state.kong.current + 1) + ".png";
+                  if (cdr.state.kong.x > cdr.config.width) cdr.state.kong.x -= cdr.config.step;
+                  cdr.kong.style.left = cdr.state.kong.x + "px";
+
+                  if (cdr.state.kong.x > 500) {
+                     var vshift = Math.floor((cdr.state.kong.x - 500) / 64) * 3;
+                     cdr.kong.style.transform = "translateY("+vshift+"px)";
+                  }
+                  cdr.kong.classList.add('hop');
+                  if (typeof cdr.state.timeout === "number") {
+                     window.clearTimeout(cdr.state.timeout);
+                     cdr.state.timeout = undefined;
+                  }
+                  cdr.state.timeout = setTimeout(function() { cdr.kong.classList.remove('hop'); cdr.state.canMove = true; cdr.kong.src = "kong0.png"; }, 600);
+                  break;
+               case 37:    // left arrow
+                  if (!cdr.state.canMove) { return; }
+                  cdr.state.canMove = false;
+                  cdr.kong.classList.remove('hop');
+                  cdr.state.kong.x -= cdr.config.step;
+                  cdr.state.kong.current ^= 1;
+                  cdr.kong.src = "kong" + (cdr.state.kong.current + 1) + ".png";
+                  if (cdr.state.kong.x < 0) cdr.state.kong.x += cdr.config.step;
+
+                  cdr.kong.style.left = cdr.state.kong.x + "px";
+
+                  if (cdr.state.kong.x > 500) {
+                     var vshift = Math.floor((cdr.state.kong.x - 500) / 64) * 3;
+                     cdr.kong.style.transform = "translateY("+vshift+"px)";
+                  }
+                  cdr.kong.classList.add('hop');
+                  if (typeof cdr.state.timeout === "number") {
+                     window.clearTimeout(cdr.state.timeout);
+                     cdr.state.timeout = undefined;
+                  }
+                  cdr.state.timeout = cdr.state.timeout = setTimeout(function() { cdr.kong.classList.remove('hop'); cdr.state.canMove = true; cdr.kong.src = "kong0.png"; }, 600);
+                  break;
+
+               case 40:    // down arrow 
+                  cdr.canMove = true;
+                  cdr.kong.src = "kong7.png";
+                  var roller = { 
+                     type: "barrel",
+                     action: "falling",
+                     img: cdr.assets.barrelAnimated.cloneNode(),
+                     xv: 0,
+                     yv: 5,
+                     x: cdr.state.kong.x + 32,
+                     y: window.innerHeight * 0.29,
+                     delay:500,
+                     now: Date.now()
+                  }
+                  cdr.objects.push(roller);
+                  roller.img.style.left = cdr.state.kong.x + 32 + "px";
+                  roller.img.style.top = roller.y + "px";
+                  cdr.main.appendChild(roller.img);
+
+                  setTimeout(function() { cdr.kong.src = "kong0.png"; }, 300);
+
+                  break;
+               
+               case 32:
+                  cdr.canMove = true;
+                  cdr.kong.src = "kong9.png";
+                  var roller = { 
+                     type: "cask",
+                     action: "rolling",
+                     img: cdr.assets.rollingCask.cloneNode(),
+                     xv: 4,
+                     yv: 0,
+                     x: cdr.state.kong.x + 128,
+                     y: (window.innerHeight * 0.28) - 14,
+                     level: 0,
+                     delay:500,
+                     now: Date.now()
+                  }
+                  
+                  cdr.objects.push(roller);
+                  roller.img.style.left = roller.x + "px";
+                  roller.img.style.top = roller.y + "px";
+                  cdr.main.appendChild(roller.img);
+                
+                  setTimeout(function() { cdr.kong.src = "kong0.png"; }, 500);
+                  break;
+               default:
+                  cdr.canMove = true;
+            } 
+         });
+      },
+      loop: function() {
+         var stamp = Date.now();
+         for (var i=0; i<cdr.objects.length; i++) {
+            var obj = cdr.objects[i];
+            if (!obj.delay || (obj.delay < stamp - obj.now)) {
+               obj.x += obj.xv;
+               obj.y += obj.yv;
+               
+               if (obj.type==="mario") {
+                  if (obj.level === 5) {
+                     if (obj.x > (444 * cdr.config.scale) && (obj.x % 32 === 0)) obj.y -= 2;
+                  } else if (obj.level===0) {
+                     if (obj.x > (500 * cdr.config.scale) && (obj.x % 32 === 0)) obj.y -= 2;
+                  } else {
+                     if (obj.x % 32 === 0) obj.y -= 2
+                  }
+                  if (obj.action=="") {
+                     obj.img.src = "runningmario0.gif";
+                     obj.action = "running";
+                  }
+                  if (((obj.level === 5) || (obj.level===3) || (obj.level===1)) && (obj.x > 728 * cdr.config.scale) && !obj.climbing) {
+                     obj.img.src = "marioclimb.gif";
+                     obj.xv = 0;
+                     obj.yv = -3;
+                     obj.climbing = true;
+                  }
+                  if (((obj.level === 4) || (obj.level===2)) && (obj.xv < 0) && (obj.x < 120 * cdr.config.scale) && !obj.climbing) {
+                     obj.img.src = "marioclimb.gif";
+                     obj.xv = 0;
+                     obj.yv = -3;
+                     obj.climbing = true;
+                  }
+                  if (obj.yv < 0) {
+                     if ((obj.level===5) && (obj.y < 823 * cdr.config.scale)) { 
+                        obj.xv = -4;
+                        obj.yv = 0;
+                        obj.level--;
+                        obj.img.src = "runningmario1.gif";
+                        obj.climbing = false;
+                     }
+
+                     if ((obj.level===3) && (obj.y < 560 * cdr.config.scale)) { 
+                        obj.xv = -4;
+                        obj.yv = 0;
+                        obj.level--;
+                        obj.img.src = "runningmario1.gif";
+                        obj.climbing = false;
+                     }
+                     
+                     if ((obj.level===1) && (obj.y < 294 * cdr.config.scale)) { 
+                        obj.xv = -4;
+                        obj.yv = 0;
+                        obj.level--;
+                        obj.img.src = "runningmario1.gif";
+                        obj.climbing = false;
+                     }
+
+
+                     if ((obj.level === 4) && (obj.y < 690 * cdr.config.scale)) {
+                        obj.xv = 4;
+                        obj.yv = 0;
+                        obj.level--;
+                        obj.img.src = "runningmario0.gif";
+                        obj.climbing = false;
+                     }
+
+                     if ((obj.level === 2) && (obj.y < 427 * cdr.config.scale)) {
+                        obj.xv = 4;
+                        obj.yv = 0;
+                        obj.level--;
+                        obj.img.src = "runningmario0.gif";
+                        obj.climbing = false;
+                     }
+                  }
+                  
+               }
+
+               if ((obj.type === "cask") || (obj.type === "barrel")) {
+                  if (obj.action==="rolling" && (obj.x % 32 === 0)) obj.y += 2;
+                  if (obj.hasOwnProperty('currentImage') && obj.action==="rolling") {
+                     obj.currentImage++;
+                     if (obj.type === "barrel" || obj.type === "cask") {
+                        if (obj.currentImage > 3) obj.currentImage = 0;
+                     }
+                  }
+                  if ((obj.yv && (obj.y > (956 * cdr.config.scale))) && (obj.type === "barrel" || obj.type === "cask")) {
+                     obj.yv = 0;
+                     obj.xv = -4;
+                     obj.action = "rolling";
+                     obj.img.src = "rolling" + obj.type + ".gif"; 
+                  }
+
+                  if (obj.xv && (obj.y >= (956 * cdr.config.scale)) && (obj.x < 32)) {
+                     obj.img.parentNode.removeChild(obj.img);
+                     cdr.objects.splice(i, 1);
+                  }
+
+                  if ((obj.xv < 0) && (obj.x < (32 * cdr.config.scale))) {
+                     obj.xv = 4; 
+                     obj.y += 67;
+                     obj.img.classList.add('fall');
+                     obj.img.src = obj.action + obj.type + ".gif";
+                     obj.now = Date.now();
+                     obj.delay = 500;
+                  } 
+
+                  if ((obj.xv > 0) && (obj.x > (830 * cdr.config.scale))) {
+                     obj.xv = -4; 
+                     obj.y += 67;
+                     obj.img.classList.add('fall');
+                     obj.img.src = obj.action + obj.type + ".gif";
+                     obj.now = Date.now();
+                     obj.delay = 500;
+                  }  
+               }
+               obj.img.style.left = obj.x + "px";
+               obj.img.style.top = obj.y + "px";
+            }
+         }
+         setTimeout(cdr.loop, 33);
+      }
+
+   };
+   cdr.init();
+   cdr.loop();
+})(window, document);
+function $$(str) { return document.getElementById(str); }
+function $(str) { return document.querySelectorAll(str); }
+</script>
+</body>
+</html>

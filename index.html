@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <title></title>
+   <style>
+      @import url('https://fonts.googleapis.com/css?family=Press+Start+2P');
+      body { padding:0; margin:0; background-color:#000; font-size:24px; text-align:center; font-family: "Press Start 2P", cursive}
+      div#main { display:inline-block; position:relative; background-image:url("dkong-bg.png"); background-size:100% 100%; height:1024px; width:896px; top:10px;}
+      .kong { display:inline-block; position:absolute; left:10%; top:20.5%; transition: all 500ms ease-in; }
+      .hop { animation: hop 600ms 1; }
+      .jump { animation: jump 700ms ease-in 1; }
+      @keyframes hop {
+         0% { transform: translateY(0px); }
+         50% { transform: translateY(-16px); }
+         100% { transform: translateY(0px); }
+      }
+      @keyframes jump {
+         0% { transform: translateY(0px); }
+         50% { transform: translateY(-16px); }
+         100% { transform: translateY(0px); }
+      }
+      #p1score { position:absolute; color:#eef; top:4%; left:6.5%; display:inline-block; } 
+      #p2score { position:absolute; color:#eef; top:4%; left:74%; display:inline-block; } 
+      #bonus { position:absolute; color:#eef; top:19%; left:80%; display:inline-block; } 
+      #hiscore { position:absolute; color:#eef; top:4%; left:40%; display:inline-block; } 
+      #kong { z-index:1000; }
+      #oilbarrel { position:absolute; top:85%; left:32px; height:96px; width:48px; }
+      #mario { position:absolute; bottom:28px; left:100px; height:48px; width:45px; z-index:9999; }
+      #damsel { position:absolute; top:14.5%; left:40%; height:64px;  z-index:100; }
+      .roller { position:absolute; display:inline-block; z-index:1001; }
+      .bounce { transition: top 500ms cubic-bezier(.63,2.00,.69,.13); }
+   </style>
+</head>
+<body>
+   <div id='main'>
+      <div id='p1score'>000000</div>
+      <div id='p2score'>000000</div>
+      <div id='hiscore'>000000</div>
+      <div id='bonus'>6000</div>
+      <img id='kong' src='kong0.png' class='kong' height='128' width='160'>
+      <img id='oilbarrel' src='oilbarrel0.gif' height='100' width='55'>
+      <img id='damsel' src='damsel.gif' height='64'>
+      <img id='mario' src='mario0.png' height='48' width='45'>
+   </div>
+<script>
+(function(w, d) {
+   w.cdr = {
+      config: {
+         scale: (window.innerHeight - 40) / 1024,
+         width: (window.innerHeight - 40) * 0.875,
+         step: 32
+      },
+      state: {
+         bonus: 6000,
+         kong: {
+            x: 80,
+            current:0
+         },
+         canMove: true
+      },
+      assets: {
+         
+      },
+      objects: [
+         { 
+            type: "mario",
+            action: "",
+            direction: 0,
+            img: document.getElementById('mario'),
+            xv: 4,
+            yv: 0,
+            x: 100,
+            y: (window.innerHeight * 0.875),
+            level: 5,
+            delay:2000,
+            now: Date.now()
+         }      
+      ],
+      ladders: [
+         { level: 0, x: 494, broken: false, height:  150, last: true},
+         { level: 1, x: 732, broken: false, height:  80, last: true },
+         { level: 1, x: 368, broken:  true, height: 125, last: false},
+         { level: 2, x: 111, broken: false, height: 80, last: true },
+         { level: 2, x: 270, broken: false, height: 100, last: false },
+         { level: 2, x: 688, broken:  true, height: 155, last: false },
+         { level: 3, x: 270, broken:  true, height: 140, last: false },
+         { level: 3, x: 435, broken: false, height: 120, last: false},
+         { level: 3, x: 740, broken: false, height:  80, last: true },
+         { level: 4, x: 111, broken: false, height:  85, last: true},
+         { level: 4, x: 365, broken: false, height: 115, last: false },
+         { level: 5, x: 336, broken:  true, height: 135, last: false },
+         { level: 5, x: 730, broken: false, height:  87, last: true }
+      ],
+      kong: d.getElementById('kong'),
+      init: function() {
+         cdr.main = main = d.getElementById('main');
+         
+         var ratio = cdr.kong.width / cdr.kong.height;
+         var newheight = cdr.kong.height * cdr.config.scale;
+
+         cdr.kong.height = newheight;
+         cdr.kong.width = newheight * ratio;
+         cdr.kong.addEventListener("animationend", function() { cdr.state.canMove = true; });
+
+         $$("oilbarrel").height = $$("oilbarrel").height * cdr.config.scale;
+         cdr.assets.barrelAnimated = new Image();
+         cdr.assets.barrelAnimated.src = "ani-barrel-down.gif";
+         cdr.assets.barrelAnimated.classList.add('roller');
+
+         cdr.assets.mario = $$('mario');
+         cdr.assets.mario.style.top = window.innerHeight * 0.875 + "px";
+
+         cdr.assets.bonus = $$('bonus');
+         setTimeout(cdr.updateBonus, 1000);
+
+         cdr.assets.caskAnimated = new Image();
+         cdr.assets.caskAnimated.src = "ani-cask-down.gif";
+         cdr.assets.caskAnimated.classList.add('roller');
+
+         cdr.assets.rollingCask = new Image();
+         cdr.assets.rollingCask.src = "rollingcask.gif";
+         cdr.assets.rollingCask.classList.add('roller');
+
+         cdr.assets.rollingBarrel = new Image();
+         cdr.assets.rollingBarrel.src = "rollingbarrel.gif";
+         cdr.assets.rollingBarrel.classList.add('roller');
+
+         main.style.height = (window.innerHeight - 40) + "px";
+         main.style.width = (window.innerHeight - 40) * 0.875 + "px";
+         main.style.top = "20px";
+
+         d.addEventListener("keydown", function(e) {
+            console.log(e.keyCode);
+            switch(e.keyCode) {
+               case 39:    // right arrow
+                  if (!cdr.state.canMove) { return; }
+                  cdr.state.canMove = false;
+                  cdr.kong.classList.remove('hop');
+                  cdr.state.kong.x += cdr.config.step;
+                  cdr.state.kong.current ^= 1;
+                  cdr.kong.src = "kong" + (cdr.state.kong.current + 1) + ".png";
+                  if (cdr.state.kong.x > cdr.config.width) cdr.state.kong.x -= cdr.config.step;
+                  cdr.kong.style.left = cdr.state.kong.x + "px";
+
+                  if (cdr.state.kong.x > 500) {
+                     var vshift = Math.floor((cdr.state.kong.x - 500) / 64) * 3;
+                     cdr.kong.style.transform = "translateY("+vshift+"px)";
+                  }
+                  cdr.kong.classList.add('hop');
+                  if (typeof cdr.state.timeout === "number") {
+                     window.clearTimeout(cdr.state.timeout);
+                     cdr.state.timeout = undefined;
+                  }
+                  cdr.state.timeout = setTimeout(function() { cdr.kong.classList.remove('hop'); cdr.state.canMove = true; cdr.kong.src = "kong0.png"; }, 600);
+                  break;
+               case 37:    // left arrow
+                  if (!cdr.state.canMove) { return; }
+                  cdr.state.canMove = false;
+                  cdr.kong.classList.remove('hop');
+                  cdr.state.kong.x -= cdr.config.step;
+                  cdr.state.kong.current ^= 1;
+                  cdr.kong.src = "kong" + (cdr.state.kong.current + 1) + ".png";
+                  if (cdr.state.kong.x < 0) cdr.state.kong.x += cdr.config.step;
+
+                  cdr.kong.style.left = cdr.state.kong.x + "px";
+
+                  if (cdr.state.kong.x > 500) {
+                     var vshift = Math.floor((cdr.state.kong.x - 500) / 64) * 3;
+                     cdr.kong.style.transform = "translateY("+vshift+"px)";
+                  }
+                  cdr.kong.classList.add('hop');
+                  if (typeof cdr.state.timeout === "number") {
+                     window.clearTimeout(cdr.state.timeout);
+                     cdr.state.timeout = undefined;
+                  }
+                  cdr.state.timeout = cdr.state.timeout = setTimeout(function() { cdr.kong.classList.remove('hop'); cdr.state.canMove = true; cdr.kong.src = "kong0.png"; }, 600);
+                  break;
+
+               case 40:    // down arrow 
+                  cdr.canMove = true;
+                  cdr.kong.src = "kong7.png";
+                  var roller = { 
+                     type: "barrel",
+                     action: "falling",
+                     img: cdr.assets.barrelAnimated.cloneNode(),
+                     xv: 0,
+                     yv: 5,
+                     level: 0,
+                     x: cdr.state.kong.x + 32,
+                     y: window.innerHeight * 0.29,
+                     delay:500,
+                     now: Date.now()
+                  }
+                  cdr.objects.push(roller);
+                  roller.img.style.left = cdr.state.kong.x + 32 + "px";
+                  roller.img.style.top = roller.y + "px";
+                  cdr.main.appendChild(roller.img);
+
+                  setTimeout(function() { cdr.kong.src = "kong0.png"; }, 300);
+
+                  break;
+               
+               case 32:
+                  cdr.canMove = true;
+                  cdr.kong.src = "kong9.png";
+                  var roller = { 
+                     type: "cask",
+                     action: "rolling",
+                     img: cdr.assets.rollingCask.cloneNode(),
+                     xv: 4,
+                     yv: 0,
+                     x: cdr.state.kong.x + 128,
+                     y: (window.innerHeight * 0.28),
+                     level: 0,
+                     delay:500,
+                     now: Date.now()
+                  }
+                  
+                  cdr.objects.push(roller);
+                  roller.img.style.left = roller.x + "px";
+                  roller.img.style.top = roller.y + "px";
+                  cdr.main.appendChild(roller.img);
+                
+                  setTimeout(function() { cdr.kong.src = "kong0.png"; }, 500);
+                  break;
+               default:
+                  cdr.canMove = true;
+            } 
+         });
+      },
+      updateBonus: function() {
+         cdr.state.bonus = parseInt(cdr.state.bonus);
+         cdr.state.bonus -= 100;
+         if (cdr.state.bonus <= 0) {
+            cdr.state.bonus = "0000";
+         } else if (cdr.state.bonus < 1000) {
+            cdr.state.bonus = "0" + cdr.state.bonus;
+         }
+         
+         cdr.assets.bonus.innerHTML = cdr.state.bonus;
+         setTimeout(cdr.updateBonus, 1000);
+      },
+      startRunning: function(obj, img) {
+         setTimeout(function() { obj.img.src = img; obj.y -= 10; obj.img.style.top = obj.y + "px"; }, 600);
+      },
+      jump: function(obj) {
+         obj.img.classList.add("jump");
+         obj.img.src = "mariojump" + ((obj.xv < 0) ? 1 : 0 ) + ".png";
+         obj.jumping = true;
+         obj.y -= 32;
+
+         setTimeout(function() { 
+            obj.img.src = "marioland" + ((obj.xv < 0) ? 1 : 0) + ".gif";
+            setTimeout(function() {
+               obj.img.src = "runningmario" + ((obj.xv < 0) ? 1 : 0 ) + ".gif";
+            }, 150);
+            obj.img.classList.remove('jump');
+            obj.y += 32;
+            obj.jumping = false;
+         }, 700);
+      },
+      checkForClimb: function(obj) {
+         var found = false;
+         for (var z=0; z<cdr.ladders.length; z++) {
+            var l = cdr.ladders[z];
+            if (obj.level==l.level && !l.broken) {
+               if ((obj.x > (l.x - 10) * cdr.config.scale) && (obj.x < (l.x + 10) * cdr.config.scale)) {
+                  if (l.last || Math.floor(Math.random() * 100) > 90) {
+                     obj.img.src = "marioclimb.gif";
+                     obj.xv = 0;
+                     obj.yv = -3;
+                     obj.climbing = true;
+                     obj.climbHeight = l.height * cdr.config.scale;
+                     obj.climbStart = obj.y;
+                     z = cdr.ladders.length;
+                     found = true;
+                  }
+               }
+            }
+         }
+         return found;
+      },
+      checkForLadder: function(obj) {
+         var ladderCount = cdr.ladders.length;
+         var found = false;
+         for (var z=0; z<ladderCount; z++) {
+            var l = cdr.ladders[z];
+            if (obj.level + 1 === l.level) {
+               if ((obj.x > (l.x - 10) * cdr.config.scale) && (obj.x < (l.x + 10) * cdr.config.scale)) {
+                  if (Math.floor(Math.random() * 100) > 95) {
+                     obj.img.classList.remove('bounce');
+                     obj.action = "falling";
+                     obj.img.src = obj.action + obj.type + ".gif";
+                     obj.xv = 0;
+                     obj.yv = 5;
+                     obj.y += 4;
+                     obj.falling = true;
+                     obj.fallHeight = l.height * cdr.config.scale;
+                     obj.fallStart = obj.y;
+                     obj.now = Date.now();
+                     obj.delay = 250;
+                     z = cdr.ladders.length;
+                     found = true;
+                  }
+               }
+            }
+         }
+         return found;
+      },
+
+      jumpCheck: function(obj) {
+         var joffset = 64;
+         for (var j=0; j<cdr.objects.length; j++) {
+            var o = cdr.objects[j];
+            if (((o.type==="cask") || (o.type==="barrel")) && (o.level===obj.level)) {
+               if (obj.xv < 0) {
+                  if ((obj.x - joffset > o.x) && (obj.x - joffset < o.x + 32)) {
+                     cdr.jump(obj);
+                  }
+               } else {
+                  if ((obj.x + joffset > o.x) && (obj.x + joffset < o.x + 64)) {
+                     cdr.jump(obj);
+                  }
+               }
+            }
+         }
+      },
+      checkDeath: function(obj) { 
+         for (var i=1; i<cdr.objects.length; i++) {
+            var b = cdr.objects[i];
+            if (b.level === obj.level) {
+               if ((obj.x > b.x) && (obj.x < b.x + 32) && (obj.y + 32 > b.y)) {
+                  obj.img.src = "mariodie.gif";
+                  cdr.state.score += 200;
+                  obj.action = "die";
+                  cdr.state.dead = true;
+                  setTimeout(cdr.resetMario, 7000);
+                  i = cdr.objects.length;
+               }
+            }
+         }
+      },
+      resetMario: function() {
+         var mario;
+         mario = cdr.objects[0] = {
+            type: "mario",
+            action: "",
+            direction: 0,
+            img: document.getElementById('mario'),
+            xv: 4,
+            yv: 0,
+            x: 100,
+            y: (window.innerHeight * 0.875),
+            level: 5,
+            delay:2000,
+            now: Date.now(),
+            dead: false 
+         };
+         cdr.state.dead = false;
+         mario.img.src = "mario0.png";
+         mario.img.style.top = mario.y + "px";
+         mario.img.style.left = mario.x + "px";
+      },
+      loop: function() {
+         var stamp = Date.now();
+         for (var i=0; i<cdr.objects.length; i++) {
+            var obj = cdr.objects[i];
+            if (!cdr.state.dead && (!obj.delay || (obj.delay < stamp - obj.now))) {
+               obj.x += obj.xv;
+               obj.y += obj.yv;
+               
+               if (obj.type==="mario") {
+                  // Handle sloping girders with decreasing obj.y every 32 pixels
+                  if (obj.level === 5) {
+                     if (obj.x > (444 * cdr.config.scale) && (obj.x % 32 === 0)) obj.y -= 2;
+                  } else if (obj.level===0) {
+                     if (obj.x > (500 * cdr.config.scale) && (obj.x % 32 === 0)) obj.y -= 2;
+                  } else {
+                     if ((obj.x % 32 === 0) && (!obj.yv)) obj.y -= 2
+                  }
+
+                  // Start running if not doing anything
+                  if (obj.action=="") {
+                     obj.img.src = "runningmario0.gif";
+                     obj.action = "running";
+                  }
+                  
+                  if (!obj.climbing) cdr.checkForClimb(obj);
+                  if (!obj.climbing && !obj.jumping) cdr.jumpCheck(obj);
+                  cdr.checkDeath(obj);
+
+                  if (obj.yv < 0) {
+                     if ((obj.level===0) && (obj.y < 170 * cdr.config.scale)) {
+                        obj.xv = 0;
+                        obj.yv = 0;
+                        obj.img.src = "mario1.png";
+                        obj.climbing = false;
+                     } else if (obj.climbStart - obj.y > obj.climbHeight) {
+                        var lr = (obj.level % 2) ? -1 : 1;
+                        obj.xv = lr * 4;
+                        obj.yv = 0;
+                        obj.level--;
+                        obj.img.src = "mariotop.gif";
+                        obj.climbing = false;
+                        obj.img.src.top = obj.y + 10 + "px";
+                        obj.delay = 600;
+                        obj.now = Date.now();
+                        cdr.startRunning(obj, 'runningmario'+(obj.level%2?0:1)+'.gif');
+                     }
+                  }
+               }
+
+               if ((obj.type === "cask") || (obj.type === "barrel")) {
+                  if (obj.action==="rolling") {
+                     if (obj.level === 5) {
+                        if (obj.x > (444 * cdr.config.scale) && (obj.x % 32 === 0)) obj.y += 2;
+                     } else if (obj.level===0) {
+                        if (obj.x > (500 * cdr.config.scale) && (obj.x % 32 === 0)) obj.y += 2;
+                     } else {
+                        if (obj.x % 32 === 0) obj.y += 2
+                     }
+                  } 
+                  if ((obj.yv && (obj.y > (956 * cdr.config.scale)))) {
+                     obj.yv = 0;
+                     obj.xv = -4;
+                     obj.action = "rolling";
+                     obj.img.src = "rolling" + obj.type + ".gif"; 
+                  }
+
+                  if (obj.xv && (obj.y >= (956 * cdr.config.scale)) && (obj.x < 64 * cdr.config.scale)) {
+                     if (obj.type === "barrel") {
+                        var ob = $$("oilbarrel");
+                        var flare = ob.src.replace(/\D/g, '');
+                        flare++;
+                        if (flare > 2) flare = 2;
+                        ob.src = "oilbarrel" + flare + ".gif";
+                     }
+                     obj.img.parentNode.removeChild(obj.img);
+                     cdr.objects.splice(i, 1);
+                  }
+                  
+                  if (obj.action!="falling") cdr.checkForLadder(obj);
+                  
+                  if (obj.action==="falling" && (obj.y - obj.fallStart - 18 > obj.fallHeight * cdr.config.scale)) {
+                     obj.level++;
+                     obj.action = "rolling";
+                     obj.yv = 0;
+                     obj.xv = (obj.level % 2) ? -4 : 4;
+                     obj.img.src = obj.action + obj.type + (obj.level % 2 ? 0 : 1) + '.gif';
+                  }
+
+                  if ((obj.xv < 0) && (obj.x < (32 * cdr.config.scale))) {
+                     obj.img.classList.add('bounce');
+                     obj.xv = 4; 
+                     obj.y += ((obj.level===1) || (obj.level===3)) ? 68 : 70; 
+                     obj.img.src = obj.action + obj.type + "1.gif";
+                     obj.now = Date.now();
+                     obj.delay = 250;
+                     obj.level++;
+                  } 
+
+                  if ((obj.xv > 0) && (obj.x > (830 * cdr.config.scale))) {
+                     obj.img.classList.add('bounce');
+                     obj.xv = -4; 
+                     obj.y += ((obj.level===1) || (obj.level===3)) ? 68 : 70; 
+                     obj.img.src = obj.action + obj.type + "0.gif";
+                     obj.now = Date.now();
+                     obj.delay = 250;
+                     obj.level++;
+                  }  
+               }
+               obj.img.style.left = Math.floor(obj.x) + "px";
+               obj.img.style.top = Math.floor(obj.y) + "px";
+            }
+         }
+         // setTimeout(cdr.loop, 33);
+      }
+
+   };
+   cdr.init();
+   setInterval(cdr.loop, 33);
+})(window, document);
+function $$(str) { return document.getElementById(str); }
+function $(str) { return document.querySelectorAll(str); }
+</script>
+</body>
+</html>
